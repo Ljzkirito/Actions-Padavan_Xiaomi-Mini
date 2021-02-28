@@ -76,111 +76,109 @@ jobs:
 
     - name: Prepare environment
       run: |
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
-        sudo -E apt-get -qq update
-        sudo -E apt-get -qq install libtool-bin gperf python-docutils autopoint gettext zip
-        sudo -E apt-get -qq autoremove --purge
-        sudo -E apt-get -qq clean
-        sudo timedatectl set-timezone "$TZ"
-        mkdir -p /opt/images
+       sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+       sudo -E apt-get -qq update
+       sudo -E apt-get -qq install libtool-bin gperf python-docutils autopoint gettext zip
+       sudo -E apt-get -qq autoremove --purge
+       sudo -E apt-get -qq clean
+       sudo timedatectl set-timezone "$TZ"
+       mkdir -p /opt/images
 
     - name: Clone source
       if: (!cancelled())
       run: |
-        df -hT $PWD
-        git clone --depth=1 $REPO_URL /opt/rt-n56u
-        cd /opt/rt-n56u
-        #GIT_VERSION="$(git rev-parse --short=7 HEAD 2>/dev/null)"
-        #build_date="$(date +%Y%m%d)"
-        #echo "build_date=${build_date}" >> $GITHUB_ENV
-        #echo "image_suffix=${GIT_VERSION}_${build_date}" >> $GITHUB_ENV
-        #echo "image_name=images_${build_variant}_${GIT_VERSION}" >> $GITHUB_ENV
-          
-     - name: Run shellcheck
-       if: (!cancelled())
-       run: |
-         cd /opt/rt-n56u
-         if [ -f ./trunk/tools/shellcheck.sh ]; then sh ./trunk/tools/shellcheck.sh; fi
+       df -hT $PWD
+       git clone --depth=1 $REPO_URL /opt/rt-n56u
+       cd /opt/rt-n56u
+#       GIT_VERSION="$(git rev-parse --short=7 HEAD 2>/dev/null)"
+#       build_date="$(date +%Y%m%d)"
+#       echo "build_date=${build_date}" >> $GITHUB_ENV
+#       echo "image_suffix=${GIT_VERSION}_${build_date}" >> $GITHUB_ENV
+#       echo "image_name=images_${build_variant}_${GIT_VERSION}" >> $GITHUB_ENV
 
-     - name: Prepare toolchain
-       id: dl_toolchain
-       if: (!cancelled())
-       run: |
-         cd /opt/rt-n56u/toolchain-mipsel
-         sh dl_toolchain.sh || echo "::set-output name=status::fail"
+    - name: Run shellcheck
+      if: (!cancelled())
+      run: |
+       cd /opt/rt-n56u
+       if [ -f ./trunk/tools/shellcheck.sh ]; then sh ./trunk/tools/shellcheck.sh; fi
+
+    - name: Prepare toolchain
+      id: dl_toolchain
+      if: (!cancelled())
+      run: |
+       cd /opt/rt-n56u/toolchain-mipsel
+       sh dl_toolchain.sh || echo "::set-output name=status::fail"
  
-     - name: Build toolchain
-       if: steps.dl_toolchain.outputs.status == 'fail' && !cancelled()
-       run: |
-         cd /opt/rt-n56u/toolchain-mipsel
-         ./clean_toolchain
-         ./build_toolchain
+    - name: Build toolchain
+      if: steps.dl_toolchain.outputs.status == 'fail' && !cancelled()
+      run: |
+       cd /opt/rt-n56u/toolchain-mipsel
+       ./clean_toolchain
+       ./build_toolchain
          
-     - name: Modify configs
-       if: (!cancelled())
-       run: |
-         cd /opt/rt-n56u/trunk/configs/templates
-         for n in $ENABLED_CFG
-         do
-          sed -i "/${n}/c${n}=y" $Build_Targets.config
-         done
-         for n in $DISABLED_CFG
-         do
-          sed -i "/${n}/c${n}=n" $Build_Targets.config
-         done
+    - name: Modify configs
+      if: (!cancelled())
+      run: |
+       cd /opt/rt-n56u/trunk/configs/templates
+       for n in $ENABLED_CFG
+       do
+        sed -i "/${n}/c${n}=y" $Build_Targets.config
+       done
+       for n in $DISABLED_CFG
+       do
+        sed -i "/${n}/c${n}=n" $Build_Targets.config
+       done
 
-      - name: Start Compile
-        if: (!cancelled())
-        id: compile
-        run: |
-          cd /opt/rt-n56u/trunk
-          fakeroot ./build_firmware_modify $Build_Targets
-          echo "::set-output name=status::success"
-          echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+    - name: Start Compile
+      if: (!cancelled())
+      id: compile
+      run: |
+        cd /opt/rt-n56u/trunk
+        fakeroot ./build_firmware_modify $Build_Targets
+        echo "::set-output name=status::success"
+        echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
-      - name: Upload firmware
-        uses: actions/upload-artifact@main
-        if: steps.compile.outputs.status == 'success' && !cancelled()
-        with:
-          name: Padavan_firmware_$Build_Targets_${{ env.FILE_DATE }}
-          path: /opt/rt-n56u/trunk/images
+    - name: Upload firmware
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      with:
+        name: Padavan_firmware_$Build_Targets_${{ env.FILE_DATE }}
+        path: /opt/rt-n56u/trunk/images
 
-     - name: Upload firmware to WeTransfer
-       id: wetransfer
-       if: steps.compile.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
-       run: |
-         curl -fsSL git.io/file-transfer | sh
-         ./transfer wet -s -p 16 --no-progress /opt/rt-n56u/trunk/images/*.trx 2>&1 | tee wetransfer.log
-         echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
-         echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
+    - name: Upload firmware to WeTransfer
+      id: wetransfer
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
+      run: |
+       curl -fsSL git.io/file-transfer | sh
+       ./transfer wet -s -p 16 --no-progress /opt/rt-n56u/trunk/images/*.trx 2>&1 | tee wetransfer.log
+       echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
+       echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
 
-     - name: Generate release tag
-       id: tag
-       if: steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-       run: |
-         echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
-         touch release.txt
-         echo "## Padavan Release $(date +"%Y.%m.%d-%H:%M")" >> release.txt
-         #echo "- ext4-sysupgrade.img.gz" >> release.txt
-         #echo "  sha256: $(cat ${{ env.FIRMWARE }}/sha256sums | grep -oE ".*ext4-sysupgrade.img.gz" | grep -oE "\w{64}")" >> release.txt
-         [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
-         echo "::set-output name=status::success"
+    - name: Generate release tag
+      id: tag
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+       echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+       touch release.txt
+       echo "## Padavan Release $(date +"%Y.%m.%d-%H:%M")" >> release.txt
+       [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
+       echo "::set-output name=status::success"
 
-     - name: Upload firmware to release
-       uses: softprops/action-gh-release@v1
-       if: steps.tag.outputs.status == 'success' && !cancelled()
-       env:
-         GITHUB_TOKEN: ${{ secrets.ACTIONS_REPO_PAT }}
-       with:
-         tag_name: ${{ steps.tag.outputs.release_tag }}
-         body_path: release.txt
-         files: /opt/rt-n56u/trunk/images/*.trx
+    - name: Upload firmware to release
+      uses: softprops/action-gh-release@v1
+      if: steps.tag.outputs.status == 'success' && !cancelled()
+      env:
+       GITHUB_TOKEN: ${{ secrets.ACTIONS_REPO_PAT }}
+      with:
+       tag_name: ${{ steps.tag.outputs.release_tag }}
+       body_path: release.txt
+       files: /opt/rt-n56u/trunk/images/*.trx
 
-     - name: Delete workflow runs
-       uses: GitRML/delete-workflow-runs@main
-       with:
-         token: ${{ secrets.ACTIONS_REPO_PAT }}
-         repository: ${{ github.repository }}
+    - name: Delete workflow runs
+      uses: GitRML/delete-workflow-runs@main
+      with:
+       token: ${{ secrets.ACTIONS_REPO_PAT }}
+       repository: ${{ github.repository }}
          retain_days: 1
          keep_minimum_runs: 3
 
