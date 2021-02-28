@@ -136,7 +136,7 @@ jobs:
       uses: actions/upload-artifact@main
       if: steps.compile.outputs.status == 'success' && !cancelled()
       with:
-        name: Padavan_firmware_$Build_Targets_${{ env.FILE_DATE }}
+        name: Padavan_firmware_$(Build_Targets)_${{ env.FILE_DATE }}
         path: /opt/rt-n56u/trunk/images
 
     - name: Upload firmware to WeTransfer
