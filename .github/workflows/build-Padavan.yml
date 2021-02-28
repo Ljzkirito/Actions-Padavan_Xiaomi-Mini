@@ -89,11 +89,6 @@ jobs:
        df -hT $PWD
        git clone --depth=1 $REPO_URL /opt/rt-n56u
        cd /opt/rt-n56u
-#       GIT_VERSION="$(git rev-parse --short=7 HEAD 2>/dev/null)"
-#       build_date="$(date +%Y%m%d)"
-#       echo "build_date=${build_date}" >> $GITHUB_ENV
-#       echo "image_suffix=${GIT_VERSION}_${build_date}" >> $GITHUB_ENV
-#       echo "image_name=images_${build_variant}_${GIT_VERSION}" >> $GITHUB_ENV
 
     - name: Run shellcheck
       if: (!cancelled())
@@ -128,7 +123,7 @@ jobs:
         sed -i "/${n}/c${n}=n" $Build_Targets.config
        done
 
-    - name: Start Compile
+    - name: Compile the firmware
       if: (!cancelled())
       id: compile
       run: |
@@ -137,7 +132,7 @@ jobs:
         echo "::set-output name=status::success"
         echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
 
-    - name: Upload firmware
+    - name: Upload firmware directory
       uses: actions/upload-artifact@main
       if: steps.compile.outputs.status == 'success' && !cancelled()
       with:
@@ -149,7 +144,7 @@ jobs:
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
       run: |
        curl -fsSL git.io/file-transfer | sh
-       ./transfer wet -s -p 16 --no-progress /opt/rt-n56u/trunk/images/*.trx 2>&1 | tee wetransfer.log
+       ./transfer wet -s -p 16 --no-progress /opt/rt-n56u/trunk/images 2>&1 | tee wetransfer.log
        echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
 
@@ -160,6 +155,9 @@ jobs:
        echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
        touch release.txt
        echo "## Padavan Release $(date +"%Y.%m.%d-%H:%M")" >> release.txt
+       echo "- $(Build_Targets).trx" >> release.txt
+       echo "  md5sum: $(md5sum /opt/rt-n56u/trunk/images/*.trx)" >> release.txt
+       echo "  sha256: $(sha256sum /opt/rt-n56u/trunk/images/*.trx)" >> release.txt
        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
        echo "::set-output name=status::success"
 
