@@ -136,7 +136,7 @@ jobs:
       uses: actions/upload-artifact@main
       if: steps.compile.outputs.status == 'success' && !cancelled()
       with:
-        name: Padavan_firmware_${{ Build_Targets }}_${{ env.FILE_DATE }}
+        name: Padavan_firmware_${{ env.Build_Targets }}_${{ env.FILE_DATE }}
         path: /opt/rt-n56u/trunk/images
 
     - name: Upload firmware to WeTransfer
@@ -155,7 +155,7 @@ jobs:
        echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
        touch release.txt
        echo "## Padavan Release $(date +"%Y.%m.%d-%H:%M")" >> release.txt
-       echo "- $($Build_Targets).trx" >> release.txt
+       echo "- ${{ env.Build_Targets }}.trx" >> release.txt
        echo "  md5sum: $(md5sum /opt/rt-n56u/trunk/images/*.trx | cut -d" " -f1)" >> release.txt
        echo "  sha256: $(sha256sum /opt/rt-n56u/trunk/images/*.trx | cut -d" " -f1)" >> release.txt
        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
