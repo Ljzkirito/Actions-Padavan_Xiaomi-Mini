@@ -89,12 +89,6 @@ jobs:
        df -hT $PWD
        git clone --depth=1 $REPO_URL /opt/rt-n56u
 
-    - name: Run shellcheck
-      if: (!cancelled())
-      run: |
-       cd /opt/rt-n56u
-       if [ -f ./trunk/tools/shellcheck.sh ]; then sh ./trunk/tools/shellcheck.sh; fi
-
     - name: Prepare toolchain
       id: dl_toolchain
       if: (!cancelled())
