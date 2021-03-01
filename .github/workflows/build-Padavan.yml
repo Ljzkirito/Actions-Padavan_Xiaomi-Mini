@@ -19,6 +19,7 @@ env:
   UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: true
   Build_Targets: MI-MINI
+  DIY_SH: diy.sh
   ENABLED_CFG: |
     CONFIG_FIRMWARE_INCLUDE_SMBD
     CONFIG_FIRMWARE_INCLUDE_SMBD36
@@ -89,6 +90,12 @@ jobs:
        df -hT $PWD
        git clone --depth=1 $REPO_URL /opt/rt-n56u
 
+    - name: Load custom configuration
+      run: |
+        chmod +x $DIY_SH
+        cd /opt/rt-n56u
+        $GITHUB_WORKSPACE/$DIY_SH
+
     - name: Prepare toolchain
       id: dl_toolchain
       if: (!cancelled())
@@ -102,7 +109,7 @@ jobs:
        cd /opt/rt-n56u/toolchain-mipsel
        ./clean_toolchain
        ./build_toolchain
-         
+
     - name: Modify configs
       if: (!cancelled())
       run: |
