@@ -10,5 +10,7 @@
 # Description: OpenWrt DIY script (After git clone)
 #
 
-# 修改openwrt登陆地址
-#sed -i 's/192.168.1.1/192.168.2.1/g' package/base-files/files/bin/config_generate
+# 修改Padavan登陆地址
+sed -i 's/192.168.2.1/192.168.5.1/g' trunk/user/shared/defaults.h
+sed -i 's/192.168.2.100/192.168.5.50/g' trunk/user/shared/defaults.h
+sed -i 's/192.168.2.244/192.168.5.100/g' trunk/user/shared/defaults.h
