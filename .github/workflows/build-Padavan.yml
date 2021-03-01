@@ -72,7 +72,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@main
 
     - name: Prepare environment
       run: |
@@ -88,7 +88,6 @@ jobs:
       run: |
        df -hT $PWD
        git clone --depth=1 $REPO_URL /opt/rt-n56u
-       cd /opt/rt-n56u
 
     - name: Run shellcheck
       if: (!cancelled())
